@@ -20,62 +20,61 @@ describe('DateTimeLabel.vue', () => {
   });
 });
 
-// ParentComponent.spec.js
-import { shallowMount } from '@vue/test-utils';
-import App from './App.vue'; 
-import DateTimeDisplay from './DateTimeDisplay.vue'; 
-
-describe('App.vue', () => {
-  it('renders the DateTimeDisplay component', () => {
-    const wrapper = shallowMount(App);
-
-    // Check if the DateTimeDisplay component is rendered
-    const dateTimeDisplay = wrapper.findComponent(DateTimeDisplay);
-    expect(dateTimeDisplay.exists()).toBe(true); 
-  });
-});
-
-
 // DateTimeDisplay.spec.js
 import { shallowMount } from '@vue/test-utils';
-import DateTimeDisplay from './DateTimeDisplay.vue'; 
-import DateTimeLabel from './DateTimeLabel.vue'; 
-import { TIME_DATA } from './time.js'; 
+import DateTimeDisplay from '@/components/DateTimeDisplay.vue'; 
+import moment from 'moment';
 
-jest.mock('./DateTimeLabel.vue', () => ({
-  name: 'DateTimeLabel',
-  props: ['value'],
-  template: '<div>{{ value }}</div>' // Mock implementation 
-}));
+jest.mock('moment'); // Mock moment.js
 
-describe('DateTimeDisplay.vue', () => {
-  let wrapper;
+describe('DateTimeDisplay', () => {
+  let wrapper: any;
 
   beforeEach(() => {
+    // Set up the mock for moment
+    (moment as jest.Mock).mockImplementation(() => ({
+      format: jest.fn((formatString: string) => {
+        if (formatString === 'YYYY/MM/DD') {
+          return '2023/10/05'; // Mocked date
+        }
+        if (formatString === 'HH:mm:ss a') {
+          return '14:30:00 PM'; // Mocked time
+        }
+        return '';
+      }),
+    }));
+
+    // Shallow mount the component
     wrapper = shallowMount(DateTimeDisplay);
   });
 
-  it('renders DateTimeLabel components with correct values', () => {
-    const dateLabel = wrapper.findComponent(DateTimeLabel).at(0);
-    const timeLabel = wrapper.findComponent(DateTimeLabel).at(1);
-
-    expect(dateLabel.exists()).toBe(true);
-    expect(timeLabel.exists()).toBe(true);
-    expect(dateLabel.props('value')).toBe(TIME_DATA[0].data.currentDate);
-    expect(timeLabel.props('value')).toBe(TIME_DATA[0].data.currentTime);
+  afterEach(() => {
+    jest.clearAllMocks(); // Clear mocks after each test
   });
 
-  it('calls updateDateTime on mount', () => {
-    const updateDateTimeSpy = jest.spyOn(wrapper.vm, 'updateDateTime');
-    wrapper.vm.$mount(); // Manually trigger the mount lifecycle hook
-    expect(updateDateTimeSpy).toHaveBeenCalled();
+  it('renders DateTimeLabel with current date and time', () => {
+    // Check if DateTimeLabel components are rendered with the correct values
+    const dateLabel = wrapper.findComponent({ name: 'DateTimeLabel' });
+    const timeLabel = wrapper.findAllComponents({ name: 'DateTimeLabel' }).at(1);
+
+    expect(dateLabel.props().value).toBe('2023/10/05');
+    expect(timeLabel.props().value).toBe('14:30:00 PM');
   });
 
-  it('sets the correct initial date and time', () => {
-    const currentDate = wrapper.vm.timeData[0].data.currentDate;
-    const currentTime = wrapper.vm.timeData[0].data.currentTime;
+  it('updates currentDate and currentTime every second', async () => {
+    jest.useFakeTimers(); // Use fake timers
 
-    expect(currentDate).toMatch(/^\d{2}\/\d{2}\/\d{2}$/); // Check date format YY/MM/DD
-    expect(currentTime).toMatch(/^\d{2}:\d{2}:\d{2}$/); // Check time format HH:MM:SS
+    // Call the updateDateTime method directly
+    wrapper.vm.updateDateTime();
+    expect(wrapper.vm.currentDate).toBe('2023/10/05');
+    expect(wrapper.vm.currentTime).toBe('14:30:00 PM');
+
+    // Simulate the passage of time
+    jest.advanceTimersByTime(1000); // Fast-forward 1 second
+
+    // Call the updateDateTime method again
+    wrapper.vm.updateDateTime();
+    expect(wrapper.vm.currentDate).toBe('2023/10/05');
+    expect(wrapper.vm.currentTime).toBe('14:30:00 PM');
   });
 });
