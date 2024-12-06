@@ -1,0 +1,44 @@
+import { shallowMount } from '@vue/test-utils';
+import MyDateTimeComponent from '@/components/MyDateTimeComponent.vue';
+import { DateTime } from 'luxon';
+
+jest.useFakeTimers(); // Use fake timers for testing setInterval
+
+describe('MyDateTimeComponent.vue', () => {
+  let wrapper;
+
+  beforeEach(() => {
+    wrapper = shallowMount(MyDateTimeComponent);
+  });
+
+  it('renders the current date and time correctly on mount', () => {
+    const now = DateTime.now();
+    const formattedDate = now.toFormat("yyyy-dd-MM");
+    const formattedTime = now.toFormat("HH:mm:ss");
+
+    expect(wrapper.find('p').text()).toContain(`Current Date: ${formattedDate}`);
+    expect(wrapper.findAll('p').at(1).text()).toContain(`Current Time: ${formattedTime}`);
+  });
+
+  it('updates the date and time every second', async () => {
+    // Fast-forward time by 1 second
+    jest.advanceTimersByTime(1000);
+    
+    // Update the current date and time
+    const now = DateTime.now();
+    const updatedFormattedDate = now.plus({ seconds: 1 }).toFormat("yyyy-dd-MM");
+    const updatedFormattedTime = now.plus({ seconds: 1 }).toFormat("HH:mm:ss");
+
+    // Trigger the updateDateTime method manually
+    wrapper.vm.updateDateTime();
+
+    // Check if the date and time have been updated
+    expect(wrapper.vm.currentDate).toBe(updatedFormattedDate);
+    expect(wrapper.vm.currentTime).toBe(updatedFormattedTime);
+    
+    // Check if the rendered text is updated
+    await wrapper.vm.$nextTick(); // Wait for the DOM to update
+    expect(wrapper.find('p').text()).toContain(`Current Date: ${updatedFormattedDate}`);
+    expect(wrapper.findAll('p').at(1).text()).toContain(`Current Time: ${updatedFormattedTime}`);
+  });
+});
